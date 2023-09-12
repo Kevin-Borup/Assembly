@@ -1,0 +1,14 @@
+CHIP ALUpre {
+    IN
+        a[16],  // 16-bit inputs        
+        za, // zero the a input?
+        na; // negate the x input?
+
+    OUT
+        out[16]; // 16-bit output
+
+    PARTS:
+    Mux16(a=a, b[0..15]=false, sel=za, out=aSel);
+    Not16(in=aSel, out=aNot);
+    Mux16(a=aSel, b=aNot, sel=na, out=out);
+}
