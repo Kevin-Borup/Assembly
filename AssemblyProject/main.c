@@ -3,6 +3,8 @@
 int readFromASMFile();
 
 int main() {
+    char filePath ="";
+
     if(readFromASMFile() == 0){
 
     }

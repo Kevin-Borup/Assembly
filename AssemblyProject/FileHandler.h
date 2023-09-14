@@ -61,7 +61,7 @@ int FileLineCounter(char *fileName){
     return count_lines;
 }
 
-int FileSaveAsBinaryHack(char *fileName){
+void FileSaveAsBinaryHack(char *fileName){
     FILE *fileptr;
     char *filePath;
     unsigned char buffer[16];
@@ -71,8 +71,7 @@ int FileSaveAsBinaryHack(char *fileName){
 
     fileptr = fopen(filePath, "w+");
 
-    fwrite(buffer,sizeof(buffer),1,fileptr); // write 16 bytes from our buffer
-
-    return 0;
+    // write 16 bits from our buffer, as each asm line is 16 bits
+    fwrite(buffer,sizeof(buffer),1,fileptr);
 }
 

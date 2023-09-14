@@ -32,18 +32,18 @@ M=D
 
 (LOOP)
     @KBD
-    D=M[A]
-    @LOOPWHITE
-    D;JLE
-    @LOOPBLACK
+    D=M
+    @FILLWHITE
+    D;JEQ
+    @FILLBLACK
     D;JGT
 
     @LOOP
     0;JMP
 
 (FILLWHITE)
-    //Protect against overspill
-    @24575
+    //Protect against overspill into KBD ram address
+    @KBD
     D=A
     @addrStart
     D=D-M
@@ -55,14 +55,14 @@ M=D
     M=1
 
     @addrStart
-    M=M+1 // Progress the word length into the screen address, to flip the next word values.
+    M=M+1 
 
     @LOOP
     0;JMP
 
 (FILLBLACK)
-    //Protect against overspill
-    @24575
+    //Protect against overspill into KBD ram address
+    @KBD
     D=A
     @addrStart
     D=D-M
