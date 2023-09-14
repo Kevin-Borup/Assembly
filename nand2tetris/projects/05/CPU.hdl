@@ -39,5 +39,68 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+
+    // Instruction parsin
+    // [0] = OpCode, [1..2] = ignore
+    
+    // [3] = a code in c-instruct
+    // [4..9] = comp bits
+    
+    // [10] = Areg
+    // [11] = Dreg
+    // [12] = Mmem
+    
+    // [13] = j1
+    // [14] = j2
+    // [15] = j3 
+
+
+    //Instruction Start
+    Mux16(a=outAlu, b=instruction, sel=instruction[3], out=insMuxOut);
+    
+    //A Register
+    Register(in=insMuxOut, load=instruction[10], out=aRegOut, out=addressM);
+
+    //D Register
+    Register(in=outAlu, load=instruction[11], out=dRegOut);
+
+    // In & Instruction Mux
+    Mux16(a=aRegOut, b=inM, sel=instruction[0], out=directAlu);
+
+    // ALU
+    ALU(x=dRegOut, y=directAlu, 
+        zx=instruction[4], nx=instruction[5], zy=instruction[6], ny=instruction[7], f=instruction[8], no=instruction[9], 
+        out=outAlu, out=outM, zr=outZr, ng=outNg);
+    
+
+    // PC Counter
+    //PC Load
+    
+    //J1
+    Not(in=outZr, out=noutZr);
+    Not(in=outNg, out=noutNg);
+
+    And(a=noutZr, b=noutNg, out=andnC);
+    And(a=andnC, b=instruction[13], out=outJ1);
+
+    //J2
+    And(a=ng, b=instruction[14], out=outJ2);
+
+    //J3
+    And(a=zr, b=instruction[15], out=outJ3);
+
+    //Assigning PcLoad
+    Or(a=outJ1, b=outJ2, out=orJ12);
+    Or(a=orJ12, b=J3, out=orJ123);
+
+    //PC Inc can always be true. For this instance, we aren't interested in getting the same input as out. 
+    // If load or reset is defined, it ignores the increment. 
+    // If reset or load is 0, then it increments.
+    // If reset or load is 1, then it ignores the incremented value.
+
+    PC(in=aRegOut, load=orJ123, inc=true, reset=reset, out=pc);
+
+    //WriteM output
+    instruction[12] = writeM;
+
 }
