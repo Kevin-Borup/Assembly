@@ -52,7 +52,7 @@ M=D
 
     @addrStart
     A=M
-    M=1
+    M=0
 
     @addrStart
     M=M+1 
