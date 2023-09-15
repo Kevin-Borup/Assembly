@@ -41,66 +41,93 @@ CHIP CPU {
     PARTS:
 
     // Instruction parsin
-    // [0] = OpCode, [1..2] = ignore
+    // [15] = OpCode, [13..14] = ignore
     
-    // [3] = a code in c-instruct
-    // [4..9] = comp bits
+    // [12] = a code in c-instruct
+    // [11..6] = comp bits
     
-    // [10] = Areg
-    // [11] = Dreg
-    // [12] = Mmem
+    // [5] = Areg
+    // [4] = Dreg
+    // [3] = Mmem
     
-    // [13] = j1
-    // [14] = j2
-    // [15] = j3 
+    // [2] = j1
+    // [1] = j2
+    // [0] = j3 
+    
+    //Instruction Decode
+    // A Instruction
+    Not(in=instruction[15], out=aInst);
+    // C Instruction
+    And(a=instruction[14], b=instruction[13], out=cOnes);
+    And(a=cOnes, b=instruction[15], out=cInst);
+    // Comp
+    And (a=cInst, b=instruction[12], out=aComp);
+    And (a=cInst, b=instruction[11], out=c1);
+    And (a=cInst, b=instruction[10], out=c2);
+    And (a=cInst, b=instruction[9],  out=c3);
+    And (a=cInst, b=instruction[8],  out=c4);
+    And (a=cInst, b=instruction[7],  out=c5);
+    And (a=cInst, b=instruction[6],  out=c6);
+    // Dest
+    And (a=cInst, b=instruction[5],  out=destA);
+    And (a=cInst, b=instruction[4],  out=destD);
+    And (a=cInst, b=instruction[3],  out=writeM);   // destM
+    // Jump
+    And (a=cInst, b=instruction[2],  out=jmpLt);
+    And (a=cInst, b=instruction[1],  out=jmpEq);
+    And (a=cInst, b=instruction[0],  out=jmpGt);
 
 
     //Instruction Start
-    Mux16(a=outAlu, b=instruction, sel=instruction[3], out=insMuxOut);
+    Mux16(a=outAlu, b=instruction, sel=aInst, out=aIn);
     
     //A Register
-    Register(in=insMuxOut, load=instruction[10], out=aRegOut, out=addressM);
+    Or(a=aInst, b=destA, out=loadA);
+    ARegister(in=aIn, load=loadA, out=aRegOut, out[0..14]=addressM);
+    // Register(in=insMuxOut, load=instruction[10], out=aRegOut, out[0..14]=addressM);
 
     //D Register
-    Register(in=outAlu, load=instruction[11], out=dRegOut);
+    DRegister(in=outAlu, load=destD, out=dRegOut);
+    // Register(in=outAlu, load=instruction[11], out=dRegOut);
 
     // In & Instruction Mux
-    Mux16(a=aRegOut, b=inM, sel=instruction[0], out=directAlu);
+    Mux16(a=aRegOut, b=inM, sel=aComp, out=directAlu);
 
     // ALU
     ALU(x=dRegOut, y=directAlu, 
-        zx=instruction[4], nx=instruction[5], zy=instruction[6], ny=instruction[7], f=instruction[8], no=instruction[9], 
+        zx=c1, nx=c2, zy=c3, ny=c4, f=c5, no=c6, 
         out=outAlu, out=outM, zr=outZr, ng=outNg);
     
 
     // PC Counter
     //PC Load
-    
-    //J1
     Not(in=outZr, out=noutZr);
     Not(in=outNg, out=noutNg);
 
-    And(a=noutZr, b=noutNg, out=andnC);
-    And(a=andnC, b=instruction[13], out=outJ1);
+    //J1
+    And(a=noutZr, b=outNg, out=valueUnder0);
+    And(a=valueUnder0, b=jmpLt, out=outj1);
 
-    //J2
-    And(a=ng, b=instruction[14], out=outJ2);
+    // //J2
+    And(a=outZr, b=noutNg, out=valueIs0);
+    And(a=valueIs0, b=jmpEq, out=outj2);
 
-    //J3
-    And(a=zr, b=instruction[15], out=outJ3);
+    // //J3
+    And(a=noutZr, b=noutNg, out=valueOver0);
+    And(a=valueOver0, b=jmpGt, out=outj3);
 
-    //Assigning PcLoad
-    Or(a=outJ1, b=outJ2, out=orJ12);
-    Or(a=orJ12, b=J3, out=orJ123);
+    // //Assigning PcLoad
+    Or(a=outj1, b=outj2, out=orj12);
+    Or(a=orj12, b=outj3, out=jmp);
+
+    // Multiplexor that selects
+    // the A-register input value for the jump address during instructions
+    // that change the A-register.
+    Mux16(a=aRegOut, b=aIn, sel=loadA, out=jmpAddr);
 
     //PC Inc can always be true. For this instance, we aren't interested in getting the same input as out. 
-    // If load or reset is defined, it ignores the increment. 
+    // If load or reset is defined, it ignores the increment, look at diagram to understand how. 
     // If reset or load is 0, then it increments.
     // If reset or load is 1, then it ignores the incremented value.
-
-    PC(in=aRegOut, load=orJ123, inc=true, reset=reset, out=pc);
-
-    //WriteM output
-    instruction[12] = writeM;
-
+    PC(in=jmpAddr, load=jmp, inc=true, reset=reset, out[0..14]=pc);
 }
