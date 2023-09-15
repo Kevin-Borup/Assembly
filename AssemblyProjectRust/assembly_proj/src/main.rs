@@ -1,21 +1,25 @@
-use std::{env, fs::File};
+use std::env;
 
-mod file_handler;
 mod asm_binary_parser;
+mod file_handler;
 
-use crate::file_handler::FileHandler;
 use crate::asm_binary_parser::AsmBinaryParser;
+use crate::file_handler::FileHandler;
 
 fn main() {
     let file_manager = FileHandler;
-    let asm_parser = AsmBinaryParser::new();
+    let mut asm_parser = AsmBinaryParser::new();
 
     let args: Vec<String> = env::args().collect();
     dbg!(&args);
 
+    if !args[1].ends_with(".asm") {
+        return;
+    }
+
     let file_path = &args[1];
-    
-    let file_content: String = file_manager.read_per_line(&file_path).unwrap().to_string();
+
+    let file_content: String = file_manager.read_per_line(&file_path).unwrap().into();
     dbg!(&file_content);
     let hack_content = asm_parser.parse_to_binary(file_content);
 
