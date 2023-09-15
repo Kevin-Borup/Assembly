@@ -1,8 +1,9 @@
 use std::fs;
 use std::fs::File;
-use std::io;
+use std::io::{self, Write};
 use std::os::windows::prelude::{OpenOptionsExt, FileExt};
 use std::path::PathBuf;
+use std::mem::size_of;
 
 pub struct FileHandler;
 
@@ -11,10 +12,16 @@ impl FileHandler {
         fs::read_to_string(file_path)
     }
 
-    pub fn save_as_binary_hack(&self, file_path: &String, file_content: String) -> () {
+    pub fn save_as_binary_hack(&self, file_path: &String, file_content: Vec<u16>) -> () {
         let mut path = PathBuf::from(file_path);
         path.set_extension("hack");
         let mut f: File = File::options().write(true).open(path.to_str().unwrap().to_string()).unwrap().into();
-        f.seek_write(file_content.as_bytes(), 0);
+        
+        let len = size_of::<u16>() * file_content.len();
+        for instruction in file_content {
+            f.write_all(unsafe {
+                std::slice::from_raw_parts(instruction.to_owned() as *const u8, len)
+            });
+        }
     }
 }
