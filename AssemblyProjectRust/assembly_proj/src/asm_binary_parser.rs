@@ -1,175 +1,151 @@
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
-pub struct AsmBinaryParser{
-    symbol_table: HashMap<&'static str, u16>,
+pub struct AsmBinaryParser {
+    symbol_table: HashMap<String, u16>,
+    variable_address_inc: u16,
 }
 
 impl AsmBinaryParser {
     pub fn new() -> AsmBinaryParser {
-        let mut predefined_table: HashMap<&str, u16> = HashMap::new();
-        for x in 0..15 {
-            let num = x;
-            predefined_table.insert( &format!("{}{}", "R", num),x);
+        let mut predefined_table: HashMap<String, u16> = HashMap::new();
+        for x in 0..16 {
+            predefined_table.insert(format!("R{}", x), x);
         }
-        predefined_table.insert("SCREEN", 16384);
-        predefined_table.insert("KBD", 24576);
 
-        predefined_table.insert("SP", 0);
-        predefined_table.insert("LCL", 1);
-        predefined_table.insert("ARG", 2);
-        predefined_table.insert("THIS", 3);
-        predefined_table.insert("THAT", 4);
+        predefined_table.insert("SCREEN".to_string(), 16384);
+        predefined_table.insert("KBD".to_string(), 24576);
+
+        predefined_table.insert("SP".to_string(), 0);
+        predefined_table.insert("LCL".to_string(), 1);
+        predefined_table.insert("ARG".to_string(), 2);
+        predefined_table.insert("THIS".to_string(), 3);
+        predefined_table.insert("THAT".to_string(), 4);
 
         AsmBinaryParser {
-            symbol_table: predefined_table }
+            symbol_table: predefined_table,
+            variable_address_inc: 16,
+        }
     }
 
     pub fn parse_to_binary(&mut self, content: String) -> Vec<u16> {
-        let asm_content = Self::clean_content_pure_asm(content);
-
+        let asm_content = Self::clean_content_pure_asm(&content);
         self.get_all_c_instructions(&asm_content);
         self.translate_all_instructions(&asm_content)
     }
 
-    fn clean_content_pure_asm(content: String) -> String {
-        let mut cleaned_content = String::new();
-        for c in content.lines() {
-            let d = &c[0..c.find("//").unwrap_or(c.len())];
-            if !d.is_empty() {
-                let e = d;
-                cleaned_content.push_str(e);
-                dbg!(e);
-            }
-        }
-        return cleaned_content;
+    fn clean_content_pure_asm(content: &str) -> String {
+        content
+            .lines()
+            .filter_map(|line| line.split("//").next())
+            .map(|x| x.replace(" ", ""))
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
-    fn get_all_c_instructions(&mut self, content: &String){
-        for (i, c) in content.lines().enumerate() {
-            if !c.starts_with("@") {
-                self.symbol_table.insert(c, u16::try_from(i).unwrap());
+    fn get_all_c_instructions(&mut self, content: &str) {
+        for (i, line) in content.lines().enumerate() {
+            if !line.starts_with('@') {
+                self.symbol_table
+                    .insert(line.to_string(), u16::try_from(i).unwrap());
             }
         }
     }
 
-    fn translate_all_instructions(&mut self, content: &String) -> Vec<u16> {
-        let mut instruction_set: Vec<u16> = Vec::new();
+    fn translate_all_instructions(&mut self, content: &str) -> Vec<u16> {
+        content
+            .lines()
+            .map(|line| self.translate_instruction(line))
+            .collect::<Vec<u16>>()
+    }
 
+    fn translate_instruction(&mut self, instruction: &str) -> u16 {
+        match instruction.starts_with('@') {
+            true => self.translate_a_instruction(instruction),
+            false => self.translate_c_instruction(instruction),
+        }
+    }
 
-        for (_i, c) in content.lines().enumerate() {
-            let mut n = 16;
-            if c.starts_with("@") {
-                if self.symbol_table.contains_key(&c) { // A Instruction, predefined variable
-                    let a_inst = self.symbol_table.get_key_value(&c).unwrap().1.to_be_bytes();
-                    instruction_set.push(((a_inst[0] as u16) << 8) | a_inst[1] as u16);
-                } else { // A Instruction, user defined variable
-                    self.symbol_table.insert(c, n);
-                    let a_inst = n.to_be_bytes();
-                    instruction_set.push(((a_inst[0] as u16) << 8) | a_inst[1] as u16);
-                    n += 1;
-                }
-            } else { // C Instruction
-                    let c_inst_parts: Vec<&str> = c.split(&['=', ';']).collect();
+    fn translate_a_instruction(&mut self, instruction: &str) -> u16 {
+        let symbol = &instruction[1..];
 
-                    let dest: &str = &c_inst_parts[0].replace(" ", ""); // Remove all spaces
-                    let comp: &str = &c_inst_parts[1].replace(" ", ""); // Remove all spaces
-                    let jump  = &c_inst_parts[2].replace(" ", ""); // Remove all spaces
-
-                    let a = if c.contains("M") {"1"} else {"0"};
-
-                    let mut c1: &str = "0";
-                    let mut c2: &str = "0";
-                    let mut c3: &str = "0";
-                    let mut c4: &str = "0";
-                    let mut c5: &str = "0";
-                    let mut c6: &str = "0";
-
-                    let mut d1: &str = "0";
-                    let mut d2: &str = "0";
-                    let mut d3: &str = "0";
-
-                    let mut j1: &str = "0";
-                    let mut j2: &str = "0";
-                    let mut j3: &str = "0";
-
-                    //comp
-                    let c_letter: &str = if a.eq("0") {"A"} else {"M"};
-                    let li = "!".to_string() + c_letter;     // !M/!A
-                    let lm = "-".to_string() + c_letter;     // !M/!A
-                    let lp1 = c_letter.to_string() + "+1" ;  // M+1/A+1
-                    let lm1 = c_letter.to_string() + "-1" ;  // M-1/A-1
-                    let dpl = "D+".to_string() + c_letter;   // D+M/D+A
-                    let dml = "D-".to_string() + c_letter;   // D-M/D-A
-                    let lmd = c_letter.to_string() + "-D";   // M-D/A-D
-                    let dal = "D&".to_string() + c_letter;   // D&M/D&A
-                    let dorl = "D|".to_string() + c_letter;  // D|M/D|A
-
-                    match comp {
-                        "0"             => {c1 = "1"; c2 = "0"; c3 = "1"; c4 = "0"; c5 = "1"; c6 = "0"},
-                        "1"             => {c1 = "1"; c2 = "1"; c3 = "1"; c4 = "1"; c5 = "1"; c6 = "1"},
-                        "-1"            => {c1 = "1"; c2 = "1"; c3 = "1"; c4 = "0"; c5 = "1"; c6 = "0"},
-                        "D"             => {c1 = "0"; c2 = "0"; c3 = "1"; c4 = "1"; c5 = "0"; c6 = "0"},
-                        c_letter  => {c1 = "1"; c2 = "1"; c3 = "0"; c4 = "0"; c5 = "0"; c6 = "0"},
-                        "!D"            => {c1 = "0"; c2 = "0"; c3 = "1"; c4 = "1"; c5 = "0"; c6 = "1"},
-                        li        => {c1 = "1"; c2 = "1"; c3 = "0"; c4 = "0"; c5 = "0"; c6 = "1"},
-                        "-D"            => {c1 = "0"; c2 = "0"; c3 = "1"; c4 = "1"; c5 = "1"; c6 = "1"},
-                        lm        => {c1 = "1"; c2 = "1"; c3 = "0"; c4 = "0"; c5 = "1"; c6 = "1"},
-                        "D+1"           => {c1 = "0"; c2 = "1"; c3 = "1"; c4 = "1"; c5 = "1"; c6 = "1"},
-                        lp1       => {c1 = "1"; c2 = "1"; c3 = "0"; c4 = "1"; c5 = "1"; c6 = "1"},
-                        "D-1"           => {c1 = "0"; c2 = "0"; c3 = "1"; c4 = "1"; c5 = "1"; c6 = "0"},
-                        lm1       => {c1 = "1"; c2 = "1"; c3 = "0"; c4 = "0"; c5 = "1"; c6 = "0"},
-                        dpl       => {c1 = "0"; c2 = "0"; c3 = "0"; c4 = "0"; c5 = "1"; c6 = "0"},
-                        dml       => {c1 = "0"; c2 = "1"; c3 = "0"; c4 = "0"; c5 = "1"; c6 = "1"},
-                        lmd       => {c1 = "0"; c2 = "0"; c3 = "0"; c4 = "1"; c5 = "1"; c6 = "1"},
-                        dal       => {c1 = "0"; c2 = "0"; c3 = "0"; c4 = "0"; c5 = "0"; c6 = "0"},
-                        dorl      => {c1 = "0"; c2 = "1"; c3 = "0"; c4 = "1"; c5 = "0"; c6 = "1"},
-                        _ => {}
-
-                    }
-
-                    //dest
-                    if dest.contains("A") {d1 = "1"}
-                    if dest.contains("D") {d2 = "1"}
-                    if dest.contains("M") {d3 = "1"}
-
-                    //jump
-                    match jump.as_str() {
-                        "JGT" => {j1 = "0"; j2 = "0"; j3 = "1"},
-                        "JEQ" => {j1 = "0"; j2 = "1"; j3 = "0"},
-                        "JGE" => {j1 = "0"; j2 = "1"; j3 = "1"},
-                        "JLT" => {j1 = "1"; j2 = "0"; j3 = "0"},
-                        "JNE" => {j1 = "1"; j2 = "0"; j3 = "1"},
-                        "JLE" => {j1 = "1"; j2 = "1"; j3 = "0"},
-                        "JMP" => {j1 = "1"; j2 = "1"; j3 = "1"},
-                        _ => {}
-                    }
-
-                    // let mut c_inst_string = String::new();
-                    // let mut c_inst_string = String::new();
-
-                    // c_inst_string.push_str("111");
-                    // c_inst_string.push_str(a);
-                    // c_inst_string.push_str(c1);
-                    // c_inst_string.push_str(c2);
-                    // c_inst_string.push_str(c3);
-                    // c_inst_string.push_str(c4);
-                    // c_inst_string.push_str(c5);
-                    // c_inst_string.push_str(c6);
-                    // c_inst_string.push_str(d1);
-                    // c_inst_string.push_str(d2);
-                    // c_inst_string.push_str(d3);
-                    // c_inst_string.push_str(j1);
-                    // c_inst_string.push_str(j2);
-                    // c_inst_string.push_str(j3);
-
-                    let c_inst_string =
-                    format!("111{a}{c1}{c2}{c3}{c4}{c5}{c6}{d1}{d2}{d3}{j1}{j2}{j3}");
-
-                    let c_inst  = c_inst_string.as_bytes();
-                    instruction_set.push(((c_inst[0] as u16) << 8) | c_inst[1] as u16);
-            }
+        if let Ok(value) = symbol.parse::<u16>() {
+            return value;
         }
 
-        return instruction_set;
+        match self.symbol_table.get(symbol) {
+            Some(val) => *val,
+            None => {
+                let new_address = self.variable_address_inc;
+                self.variable_address_inc += 1;
+                self.symbol_table.insert(symbol.to_string(), new_address);
+                new_address
+            }
+        }
+    }
+
+    fn translate_c_instruction(&self, instruction: &str) -> u16 {
+        let dest_comp_jump: Vec<&str> = instruction.split(&['=', ';']).collect();
+
+        let dest = Self::dest_bits(dest_comp_jump.get(0).unwrap_or(&""));
+        let comp = Self::comp_bits(dest_comp_jump.get(1).unwrap_or(&""));
+        let jump = Self::jump_bits(dest_comp_jump.get(2).unwrap_or(&""));
+
+        let a = if comp.contains("M") {"1"} else {"0"};
+
+        let binary = format!("111{}{}{}{}", a, comp, dest, jump);
+        u16::from_str_radix(&binary, 2).unwrap()
+    }
+
+    // A catalog collection  ---- Could also be solved by checking if contains A -> d1 = 1, D -> d2 = 1, M -> d3 = 1
+    fn dest_bits(dest: &str) -> &str {
+        match dest {
+            "M" => "001",
+            "D" => "010",
+            "MD" | "DM" => "011",
+            "A" => "100",
+            "AM" | "MA" => "101",
+            "AD" | "DA" => "110",
+            "AMD" | "ADM" | "MDA" | "MAD" | "DMA" | "DAM" => "111",
+            _ => "000",
+        }
+    }
+
+    fn comp_bits(comp: &str) -> &str {
+        match comp {
+            "0"             => "101010",
+            "1"             => "111111",
+            "-1"            => "111010",
+            "D"             => "001100",
+            "A" | "M"       => "110000",
+            "!D"            => "001101",
+            "!A" | "!M"     => "110001",
+            "-D"            => "001111",
+            "-A" | "-M"     => "110011",
+            "D+1"           => "011111",
+            "A+1" | "M+1"   => "110111",
+            "D-1"           => "001110",
+            "A-1" | "M-1"   => "110010",
+            "D+A" | "D+M"   => "000010",
+            "D-A" | "D-M"   => "010011",
+            "A-D" | "M-D"   => "000111",
+            "D&A" | "D&M"   => "000000",
+            "D|A" | "D|M"   => "010101",
+            _ => "",
+        }
+    }
+
+    fn jump_bits(jump: &str) -> &str {
+        match jump {
+            "JGT" => "001",
+            "JEQ" => "010",
+            "JGE" => "011",
+            "JLT" => "100",
+            "JNE" => "101",
+            "JLE" => "110",
+            "JMP" => "111",
+            _ => "000",
+        }
     }
 }
