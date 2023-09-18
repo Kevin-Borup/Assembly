@@ -17,9 +17,10 @@ impl FileHandler {
 
         let mut string_bytes = String::new();
         for instruction in &file_content {
+
             string_bytes.push_str(&format!("{:016b}\n", instruction));
         }
-        f.write_all(string_bytes.as_bytes()).expect("Failed to write to .hack file");
+        f.write_all(string_bytes.trim_end().as_bytes()).expect("Failed to write to .hack file");
 
     }
 }

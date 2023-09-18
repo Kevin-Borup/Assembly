@@ -33,9 +33,9 @@ impl AsmBinaryParser {
     pub fn parse_to_binary(&mut self, content: String) -> Vec<u16> {
         let mut asm_content = Self::clean_content_pure_asm(&content);
         self.get_all_labels_instructions(&asm_content);
-        dbg!(&asm_content);
+        // dbg!(&asm_content);
         asm_content = self.remove_all_labels_instructions(&asm_content);
-        dbg!(&asm_content);
+        // dbg!(&asm_content);
 
         self.translate_all_instructions(&asm_content)
     }
@@ -53,11 +53,11 @@ impl AsmBinaryParser {
     fn get_all_labels_instructions(&mut self, content: &str) {
         for (i, line) in content.lines().enumerate() {
             if line.starts_with('(') {
-                let converted_to_label = line.replace('(', "@").replace(')', "").to_string();
-                dbg!(&converted_to_label);
-                dbg!(&i);
-                dbg!(&self.label_lineshift_inc);
-                dbg!(&(i-self.label_lineshift_inc));
+                // let converted_to_label = line.replace('(', "@").replace(')', "").to_string();
+                // dbg!(&converted_to_label);
+                // dbg!(&i);
+                // dbg!(&self.label_lineshift_inc);
+                // dbg!(&(i-self.label_lineshift_inc));
                 self.symbol_table
                     .insert(
                         line.replace('(', "").replace(')', "").to_string(), //Converts (XXX) -> XXX
@@ -90,7 +90,7 @@ impl AsmBinaryParser {
     }
 
     fn translate_a_instruction(&mut self, instruction: &str) -> u16 {
-        dbg!(&instruction);
+        // dbg!(&instruction);
 
         let symbol = &instruction[1..];
 
@@ -100,21 +100,21 @@ impl AsmBinaryParser {
 
         match self.symbol_table.get(symbol) {
             Some(val) => {
-                dbg!(&val);
+                // dbg!(&val);
                 *val
             },
             None => {
                 let new_address = self.variable_address_inc;
                 self.variable_address_inc += 1;
                 self.symbol_table.insert(symbol.to_string(), new_address);
-                dbg!(&new_address);
+                // dbg!(&new_address);
                 new_address
             }
         }
     }
 
     fn translate_c_instruction(&self, instruction: &str) -> u16 {
-        dbg!(&instruction);
+        // dbg!(&instruction);
         let prepared_inst = match instruction.contains('=') {
             true => instruction.into(),
             false => format!("null={}", instruction),
@@ -125,16 +125,16 @@ impl AsmBinaryParser {
         let dest = Self::dest_bits(dest_comp_jump.get(0).unwrap_or(&""));
         let comp = Self::comp_bits(dest_comp_jump.get(1).unwrap_or(&""));
         let jump = Self::jump_bits(dest_comp_jump.get(2).unwrap_or(&""));
-        dbg!(&dest);
-        dbg!(&comp);
-        dbg!(&jump);
+        // dbg!(&dest);
+        // dbg!(&comp);
+        // dbg!(&jump);
 
 
         let a = if dest_comp_jump.get(1).unwrap_or(&"").contains("M") {"1"} else {"0"};
-        dbg!(&a);
+        // dbg!(&a);
 
         let binary = format!("111{}{}{}{}", a, comp, dest, jump);
-        dbg!(&binary);
+        // dbg!(&binary);
         u16::from_str_radix(&binary, 2).unwrap()
     }
 
