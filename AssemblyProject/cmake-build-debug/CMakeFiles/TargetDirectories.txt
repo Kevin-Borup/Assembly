@@ -1,3 +1,0 @@
-C:/ZBC Data-Kommunikation/H3/Assembly/AssemblyProject/cmake-build-debug/CMakeFiles/AssemblyProject.dir
-C:/ZBC Data-Kommunikation/H3/Assembly/AssemblyProject/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/ZBC Data-Kommunikation/H3/Assembly/AssemblyProject/cmake-build-debug/CMakeFiles/rebuild_cache.dir
