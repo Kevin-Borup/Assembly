@@ -30,7 +30,7 @@ impl AsmBinaryParser {
 
     pub fn parse_to_binary(&mut self, content: String) -> Vec<u16> {
         let asm_content = Self::clean_content_pure_asm(&content);
-        self.get_all_c_instructions(&asm_content);
+        self.get_all_labels_instructions(&asm_content);
         self.translate_all_instructions(&asm_content)
     }
 
@@ -44,11 +44,11 @@ impl AsmBinaryParser {
             .join("\n")
     }
 
-    fn get_all_c_instructions(&mut self, content: &str) {
+    fn get_all_labels_instructions(&mut self, content: &str) {
         for (i, line) in content.lines().enumerate() {
-            if !line.starts_with('@') {
+            if line.starts_with('(') {
                 self.symbol_table
-                    .insert(line.to_string(), u16::try_from(i).unwrap());
+                    .insert(line.to_string(), u16::try_from(i+1).unwrap());
             }
         }
     }
