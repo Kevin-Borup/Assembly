@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 
 pub struct AsmBinaryParser {
     symbol_table: HashMap<String, u16>,
+    label_lineshift_inc: usize,
     variable_address_inc: u16,
 }
 
@@ -24,13 +25,18 @@ impl AsmBinaryParser {
 
         AsmBinaryParser {
             symbol_table: predefined_table,
+            label_lineshift_inc: 0,
             variable_address_inc: 16,
         }
     }
 
     pub fn parse_to_binary(&mut self, content: String) -> Vec<u16> {
-        let asm_content = Self::clean_content_pure_asm(&content);
+        let mut asm_content = Self::clean_content_pure_asm(&content);
         self.get_all_labels_instructions(&asm_content);
+        dbg!(&asm_content);
+        asm_content = self.remove_all_labels_instructions(&asm_content);
+        dbg!(&asm_content);
+
         self.translate_all_instructions(&asm_content)
     }
 
@@ -47,10 +53,26 @@ impl AsmBinaryParser {
     fn get_all_labels_instructions(&mut self, content: &str) {
         for (i, line) in content.lines().enumerate() {
             if line.starts_with('(') {
+                let converted_to_label = line.replace('(', "@").replace(')', "").to_string();
+                dbg!(&converted_to_label);
+                dbg!(&i);
+                dbg!(&self.label_lineshift_inc);
+                dbg!(&(i-self.label_lineshift_inc));
                 self.symbol_table
-                    .insert(line.to_string(), u16::try_from(i+1).unwrap());
+                    .insert(
+                        line.replace('(', "").replace(')', "").to_string(), //Converts (XXX) -> XXX
+                        u16::try_from(i-self.label_lineshift_inc).unwrap());
+                self.label_lineshift_inc += 1;
             }
         }
+    }
+
+    fn remove_all_labels_instructions(&mut self, content: &str) -> String {
+        content
+            .lines()
+            .filter(|line| !line.starts_with('('))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     fn translate_all_instructions(&mut self, content: &str) -> Vec<u16> {
@@ -68,6 +90,8 @@ impl AsmBinaryParser {
     }
 
     fn translate_a_instruction(&mut self, instruction: &str) -> u16 {
+        dbg!(&instruction);
+
         let symbol = &instruction[1..];
 
         if let Ok(value) = symbol.parse::<u16>() {
@@ -75,32 +99,49 @@ impl AsmBinaryParser {
         }
 
         match self.symbol_table.get(symbol) {
-            Some(val) => *val,
+            Some(val) => {
+                dbg!(&val);
+                *val
+            },
             None => {
                 let new_address = self.variable_address_inc;
                 self.variable_address_inc += 1;
                 self.symbol_table.insert(symbol.to_string(), new_address);
+                dbg!(&new_address);
                 new_address
             }
         }
     }
 
     fn translate_c_instruction(&self, instruction: &str) -> u16 {
-        let dest_comp_jump: Vec<&str> = instruction.split(&['=', ';']).collect();
+        dbg!(&instruction);
+        let prepared_inst = match instruction.contains('=') {
+            true => instruction.into(),
+            false => format!("null={}", instruction),
+        };
+
+        let dest_comp_jump: Vec<&str> = prepared_inst.split(&['=', ';']).collect();
 
         let dest = Self::dest_bits(dest_comp_jump.get(0).unwrap_or(&""));
         let comp = Self::comp_bits(dest_comp_jump.get(1).unwrap_or(&""));
         let jump = Self::jump_bits(dest_comp_jump.get(2).unwrap_or(&""));
+        dbg!(&dest);
+        dbg!(&comp);
+        dbg!(&jump);
 
-        let a = if comp.contains("M") {"1"} else {"0"};
+
+        let a = if dest_comp_jump.get(1).unwrap_or(&"").contains("M") {"1"} else {"0"};
+        dbg!(&a);
 
         let binary = format!("111{}{}{}{}", a, comp, dest, jump);
+        dbg!(&binary);
         u16::from_str_radix(&binary, 2).unwrap()
     }
 
     // A catalog collection  ---- Could also be solved by checking if contains A -> d1 = 1, D -> d2 = 1, M -> d3 = 1
     fn dest_bits(dest: &str) -> &str {
         match dest {
+            "null" => "000",
             "M" => "001",
             "D" => "010",
             "MD" | "DM" => "011",
