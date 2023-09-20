@@ -48,13 +48,6 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             string[] vmcode = CleanedVMcode(content);
             List<string> convertedToAsm = new List<string>();
 
-            //List<string> convertedToAsm = new List<string>()
-            //{
-            //    SysInitializationAsm(),
-            //};
-
-            convertedToAsm.Add(SysInitializationAsm());
-
             for (int i = 0; i < vmcode.Length; i++)
             {
                 convertedToAsm.Add(TranslateCmdType(vmcode[i]));
