@@ -1,0 +1,14 @@
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\bin\Debug\net7.0\ConsoleApp_VM_Converter.exe
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\bin\Debug\net7.0\ConsoleApp_VM_Converter.deps.json
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\bin\Debug\net7.0\ConsoleApp_VM_Converter.runtimeconfig.json
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\bin\Debug\net7.0\ConsoleApp_VM_Converter.dll
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\bin\Debug\net7.0\ConsoleApp_VM_Converter.pdb
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ConsoleApp_VM_Converter.GeneratedMSBuildEditorConfig.editorconfig
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ConsoleApp_VM_Converter.AssemblyInfoInputs.cache
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ConsoleApp_VM_Converter.AssemblyInfo.cs
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ConsoleApp_VM_Converter.csproj.CoreCompileInputs.cache
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ConsoleApp_VM_Converter.dll
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\refint\ConsoleApp_VM_Converter.dll
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ConsoleApp_VM_Converter.pdb
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ConsoleApp_VM_Converter.genruntimeconfig.cache
+C:\ZBC Data-Kommunikation\H3\Assembly\ConsoleApp_VM_Converter\obj\Debug\net7.0\ref\ConsoleApp_VM_Converter.dll

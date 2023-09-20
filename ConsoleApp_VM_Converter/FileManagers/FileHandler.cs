@@ -13,6 +13,17 @@ namespace ConsoleApp_VM_Converter.FileManagers
             return File.ReadAllLines(filePath);
         }
 
+        public bool IsPathFolder(string path)
+        {
+            FileAttributes attr = File.GetAttributes(path);
+            return (attr & FileAttributes.Directory) == FileAttributes.Directory;
+        }
+
+        public string[] GetAsmFilesInFolder(string folderPath)
+        {
+            return Directory.GetFiles(folderPath, "*.vm");
+        }
+
         public void SaveAsAsmFile(string filePath, string[] fileContent)
         {
 
@@ -22,13 +33,13 @@ namespace ConsoleApp_VM_Converter.FileManagers
             {
                 using (var stream = File.Create(asmFile))
                 {
-                    byte[] buffer = new byte[fileContent.Length];
-                    for (int i = 0; i < fileContent.Length; i++)
+                    using (var writer =  new StreamWriter(stream))
                     {
-                        buffer[i] = Convert.ToByte(fileContent);
+                        for (int i = 0; i < fileContent.Length; i++)
+                        {
+                            writer.Write(fileContent[i]);
+                        }
                     }
-
-                    stream.Write(buffer);
                 }
             }
             catch (Exception e)

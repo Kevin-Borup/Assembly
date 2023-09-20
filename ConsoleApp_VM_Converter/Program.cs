@@ -7,21 +7,50 @@ namespace ConsoleApp_VM_Converter
     {
         static void Main(string[] args)
         {
+            string[] filePaths = new string[] { "" };
             if (args.Length == 0 || !args[0].ToLower().EndsWith(".vm"))
             {
-                throw new Exception("Include a valid .vm file as argument");
+                bool proj7part1files = false;
+                bool proj7part2files = true;
+
+                filePaths = ProjectData.GetProjectData(proj7part1files, proj7part2files);
+            }
+            else
+            {
+                filePaths = new string[args.Length];
+                for (int i = 0; i < args.Length; i++)
+                {
+                    filePaths[i] = args[i];
+                }
             }
 
             FileHandler fileManager = new FileHandler();
             VMtoAsmParser parser = new VMtoAsmParser();
 
-            string filePath = args[0];
+            for (int i = 0; i < filePaths.Length; i++)
+            {
+                string[] fileContent = new string[] { "" };
 
-            string[] fileContent = fileManager.GetContentAsStrings(filePath);
+                if (fileManager.IsPathFolder(filePaths[i]))
+                {
+                    string[] filesInFolder = fileManager.GetAsmFilesInFolder(filePaths[i]);
 
-            string[] parsedFileContent = parser.ConvertVMtoASM(fileContent);
+                    for (int j = 0; j < filesInFolder.Length; j++)
+                    {
+                        fileContent.Concat(fileManager.GetContentAsStrings(filesInFolder[j]));
+                    }
+                }
+                else
+                {
+                    fileContent = fileManager.GetContentAsStrings(filePaths[i]);
+                }
 
-            fileManager.SaveAsAsmFile(filePath, parsedFileContent);
+                string[] parsedFileContent = parser.ConvertVMtoASM(fileContent);
+
+                fileManager.SaveAsAsmFile(filePaths[i], parsedFileContent);
+            }
         }
+
+
     }
 }

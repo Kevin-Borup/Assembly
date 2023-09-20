@@ -1,10 +1,16 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+// enum CommandType {
+//     name,
+//     number,
+// }
+
 pub struct AsmBinaryParser {
     symbol_table: HashMap<String, u16>,
     label_lineshift_inc: usize,
     variable_address_inc: u16,
+    // commands: CommandType,
 }
 
 impl AsmBinaryParser {
@@ -34,7 +40,7 @@ impl AsmBinaryParser {
         let mut asm_content = Self::clean_content_pure_asm(&content);
         self.get_all_labels_instructions(&asm_content);
         // dbg!(&asm_content);
-        asm_content = self.remove_all_labels_instructions(&asm_content);
+        asm_content = Self::remove_all_labels_instructions(&asm_content);
         // dbg!(&asm_content);
 
         self.translate_all_instructions(&asm_content)
@@ -67,7 +73,7 @@ impl AsmBinaryParser {
         }
     }
 
-    fn remove_all_labels_instructions(&mut self, content: &str) -> String {
+    fn remove_all_labels_instructions(content: &str) -> String {
         content
             .lines()
             .filter(|line| !line.starts_with('('))
@@ -105,9 +111,9 @@ impl AsmBinaryParser {
             },
             None => {
                 let new_address = self.variable_address_inc;
-                self.variable_address_inc += 1;
                 self.symbol_table.insert(symbol.to_string(), new_address);
                 // dbg!(&new_address);
+                self.variable_address_inc += 1;
                 new_address
             }
         }
