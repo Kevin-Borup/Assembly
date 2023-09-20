@@ -46,14 +46,11 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
         public string[] ConvertVMtoASM(string[] content)
         {
             string[] vmcode = CleanedVMcode(content);
-            List<string> convertedToAsm = new List<string>();
 
-            //List<string> convertedToAsm = new List<string>()
-            //{
-            //    SysInitializationAsm(),
-            //};
-
-            convertedToAsm.Add(SysInitializationAsm());
+            List<string> convertedToAsm = new List<string>()
+            {
+                SysInitializationAsm(),
+            };
 
             for (int i = 0; i < vmcode.Length; i++)
             {
