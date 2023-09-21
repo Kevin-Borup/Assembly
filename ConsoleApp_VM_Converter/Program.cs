@@ -25,27 +25,28 @@ namespace ConsoleApp_VM_Converter
             }
 
             FileHandler fileManager = new FileHandler();
-            VMtoAsmParser parser = new VMtoAsmParser();
+            VMtoAsmParser parser;
 
             for (int i = 0; i < filePaths.Length; i++)
             {
-                string[] fileContent = new string[] { "" };
+                parser = new VMtoAsmParser();
+
+                string[] parsedFileContent = new string[] { parser.SysInitializationAsm() };
 
                 if (fileManager.IsPathFolder(filePaths[i]))
                 {
-                    string[] filesInFolder = fileManager.GetAsmFilesInFolder(filePaths[i]);
+                    string[] vmFilesInFolder = fileManager.GetAsmFilesInFolder(filePaths[i]);
 
-                    for (int j = 0; j < filesInFolder.Length; j++)
+                    for (int j = 0; j < vmFilesInFolder.Length; j++)
                     {
-                        fileContent.Concat(fileManager.GetContentAsStrings(filesInFolder[j]));
+                        parsedFileContent = parsedFileContent.Concat(parser.ConvertVMtoASM(fileManager.GetContentAsStrings(vmFilesInFolder[j]), Path.GetFileName(vmFilesInFolder[j]))).ToArray();
                     }
                 }
                 else
                 {
-                    fileContent = fileManager.GetContentAsStrings(filePaths[i]);
+                    parsedFileContent = parser.ConvertVMtoASM(fileManager.GetContentAsStrings(filePaths[i]), Path.GetFileName(filePaths[i]));
                 }
 
-                string[] parsedFileContent = parser.ConvertVMtoASM(fileContent);
 
                 fileManager.SaveAsAsmFile(filePaths[i], parsedFileContent);
             }

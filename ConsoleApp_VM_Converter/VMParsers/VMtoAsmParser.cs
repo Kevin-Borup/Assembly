@@ -9,7 +9,20 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
 {
     internal class VMtoAsmParser
     {
-        private int labelInc = 0;
+        private int labelInc;
+        private int functionLabelInc;
+
+        private string currentFileName;
+
+        private Dictionary<string, int> staticLabels;
+
+        public VMtoAsmParser()
+        {
+            labelInc = 0;
+            functionLabelInc = 0;
+            staticLabels = new Dictionary<string, int>();
+        }
+
         string[] arithmicCmds = new string[]
         {
             "add",
@@ -43,14 +56,13 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             "return",
         };
 
-        public string[] ConvertVMtoASM(string[] content)
+        public string[] ConvertVMtoASM(string[] content, string fileName)
         {
+            this.currentFileName = fileName;
+
             string[] vmcode = CleanedVMcode(content);
 
-            List<string> convertedToAsm = new List<string>()
-            {
-                SysInitializationAsm(),
-            };
+            List<string> convertedToAsm = new List<string>();
 
             for (int i = 0; i < vmcode.Length; i++)
             {
@@ -83,7 +95,7 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             return cleanedCode.ToArray();
         }
 
-        private string SysInitializationAsm()
+        public string SysInitializationAsm()
         {
             StringBuilder sysInit = new StringBuilder();
 
@@ -91,7 +103,7 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             sysInit.AppendLine("D=A");
             sysInit.AppendLine("@SP");
             sysInit.AppendLine("M=D");
-            sysInit.AppendLine("@RETURN_LABEL0");
+            sysInit.AppendLine("@RETURN_LABEL" + functionLabelInc);
             sysInit.AppendLine("D=A");
             sysInit.AppendLine("@SP");
             sysInit.AppendLine("A=M");
@@ -140,7 +152,9 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             sysInit.AppendLine("M=D");
             sysInit.AppendLine("@Sys.init");
             sysInit.AppendLine("0;JMP");
-            sysInit.AppendLine("(RETURN_LABEL0)");
+            sysInit.AppendLine($"(RETURN_LABEL{functionLabelInc})");
+
+            functionLabelInc++;
 
             return sysInit.ToString();
         }
@@ -172,14 +186,14 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             else if (funcCmds.Contains(cmd))
             {
                 string fnName = "";
-                string args = "";
+                int args = 0;
 
                 if (cmd != "return")
                 {
                     if (cmd_values.Length < 2) throw new Exception("Not enough Function command variables defined.");
 
                     fnName = cmd_values[1];
-                    args = cmd_values[2];
+                    args = int.Parse(cmd_values[2]);
                 }
 
                 return FunctionCommands(cmd, fnName, args); // Cmd FunctionName Args || Cmd=return
@@ -260,7 +274,7 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             {
                 {"local", "LCL" },
                 {"argument", "ARG" },
-                {"temp", "Ri" },
+                {"temp", "R5" },
                 {"this", "THIS" },
                 {"that", "THAT" },
             };
@@ -294,9 +308,8 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
                     }
                     else //static
                     {
-                        address = (16 + index).ToString(); // Static RAM address start + move
+                        address = this.currentFileName + index;
                     }
-
 
                     asmCode.AppendLine($"@{address}");
                     asmCode.AppendLine($"D=M");
@@ -319,7 +332,6 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
             {
                 if (memSegments.TryGetValue(segment, out string address))
                 { // Local, Argument, This, That, Temp
-                    address = address.Replace("i", (index - 1).ToString()); // Temp RAM address start + move
                     if (segment.Equals("temp")) index = 5 + index;
 
                     asmCode.AppendLine($"@{address}");
@@ -338,7 +350,7 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
                     }
                     else //static
                     {
-                        address = (16 + index).ToString(); // Static RAM address start + move
+                        address = this.currentFileName + index;
                     }
 
 
@@ -363,12 +375,161 @@ namespace ConsoleApp_VM_Converter.VM_Parsers
 
         private string BranchingCommands(string cmd, string label)
         {
-            return string.Empty;
+            StringBuilder asmCode = new StringBuilder();
+
+            if (cmd.Equals("label")) // Label
+            {
+                asmCode.AppendLine($"({label})");
+            }
+            else if (cmd.Equals("goto")) // Go To
+            {
+                asmCode.AppendLine("@" + label);
+                asmCode.AppendLine("0;JMP");
+            }
+            else if (cmd.Equals("if-goto")) // If Go To
+            {
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("AM=M-1");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("A=A-1");
+                asmCode.AppendLine("@" + label);
+                asmCode.AppendLine("D;JNE");
+            }
+
+            return asmCode.ToString();
         }
 
-        private string FunctionCommands(string cmd, string fnName = "", string args = "")
+        private string FunctionCommands(string cmd, string fnName = "", int argCount = 0)
         {
-            return string.Empty;
+            StringBuilder asmCode = new StringBuilder();
+
+            if (cmd.Equals("function")) // Define function
+            {
+                asmCode.AppendLine($"({fnName})");
+
+                for (int i = 0; i < argCount; i++)
+                {
+                    asmCode.AppendLine("@0");
+                    asmCode.AppendLine("D=A");
+                    asmCode.AppendLine("@SP");
+                    asmCode.AppendLine("A=M");
+                    asmCode.AppendLine("M=D");
+                    asmCode.AppendLine("@SP");
+                    asmCode.AppendLine("M=M+1");
+                }
+            }
+            else if (cmd.Equals("call")) // Call function
+            {
+                asmCode.AppendLine("@RETURN_LABEL" + functionLabelInc);
+                asmCode.AppendLine("D=A");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("A=M");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("M=M+1");
+                asmCode.AppendLine("@LCL");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("A=M");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("M=M+1");
+                asmCode.AppendLine("@ARG");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("A=M");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("M=M+1");
+                asmCode.AppendLine("@THIS");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("A=M");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("M=M+1");
+                asmCode.AppendLine("@THAT");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("A=M");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("M=M+1");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@5");
+                asmCode.AppendLine("D=D-A");
+                asmCode.AppendLine("@" + argCount);
+                asmCode.AppendLine("D=D-A");
+                asmCode.AppendLine("@ARG");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@LCL");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@" + fnName);
+                asmCode.AppendLine("0;JMP");
+                asmCode.AppendLine($"(RETURN_LABEL{functionLabelInc})");
+
+                functionLabelInc++;
+            }
+            else if (cmd.Equals("return")) // return from function
+            {
+                asmCode.AppendLine("@LCL");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@R11");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@5");
+                asmCode.AppendLine("A=D-A");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@R12");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@ARG");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@0");
+                asmCode.AppendLine("D=D+A");
+                asmCode.AppendLine("@R13");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("AM=M-1");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@R13");
+                asmCode.AppendLine("A=M");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@ARG");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@SP");
+                asmCode.AppendLine("M=D+1");
+                asmCode.AppendLine("@R11");
+                asmCode.AppendLine("D=M-1");
+                asmCode.AppendLine("AM=D");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@THAT");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@R11");
+                asmCode.AppendLine("D=M-1");
+                asmCode.AppendLine("AM=D");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@THIS");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@R11");
+                asmCode.AppendLine("D=M-1");
+                asmCode.AppendLine("AM=D");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@ARG");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@R11");
+                asmCode.AppendLine("D=M-1");
+                asmCode.AppendLine("AM=D");
+                asmCode.AppendLine("D=M");
+                asmCode.AppendLine("@LCL");
+                asmCode.AppendLine("M=D");
+                asmCode.AppendLine("@R12");
+                asmCode.AppendLine("A=M");
+                asmCode.AppendLine("0;JMP");
+            }
+
+            return asmCode.ToString();
         }
     }
 }
